@@ -1,0 +1,78 @@
+<launch>
+<!-- Launch file for Livox AVIA LiDAR -->
+
+	<arg name="rviz" default="true" />
+
+	<rosparam command="load" file="$(find fast_lio_localization)/config/airy96.yaml" />
+
+	<param name="feature_extract_enable" type="bool" value="0"/>
+	<param name="point_filter_num" type="int" value="6"/>
+	<param name="max_iteration" type="int" value="5" />
+	<param name="filter_size_surf" type="double" value="0.25" />
+	<param name="filter_size_map" type="double" value="0.25" />
+	<param name="cube_side_length" type="double" value="1000" />
+	<param name="runtime_pos_log_enable" type="bool" value="0" />
+    <node pkg="fast_lio_localization" type="fastlio_mapping1" name="laserMapping" output="screen" /> 
+
+
+	<!-- 主地图输入 -->
+	<arg name="map" default="/home/jianmi/3D_navigation/src/map_processing/output/filtered_input.pcd" />
+	<!-- loalization-->
+    <node pkg="fast_lio_localization" type="global_localization" name="global_localization" output="screen" >
+        <param name="localization_th" value="0.95" />
+        <param name="global_recall_success_th" value="0.75" />
+        <param name="recall_coarse_scale" value="3" />
+        <param name="recall_scan_scale" value="2" />
+        <param name="recall_map_voxel_size" value="0.6" />
+        <param name="recall_crop_radius_z" value="3.0" />
+        <param name="recall_crop_radius" value="18.0" />
+        <param name="recall_z_step" value="1.0" />
+        <param name="recall_grid_step" value="5.0" />
+        <param name="failures_before_recovery" value="2" />
+        <param name="local_crop_radius_xy" value="20.0" />
+        <param name="local_crop_radius_z" value="4.0" />
+        <param name="enable_scan_context" value="true" />
+        <param name="global_search_grid" value="2.0" />
+        <param name="global_search_max_candidates" value="80" />
+        <param name="global_search_support_radius_bins" value="2" />
+        <param name="global_search_min_points_per_bin" value="1" />
+        <param name="global_search_submap_radius" value="25.0" />
+        <param name="scan_context_num_rings" value="20" />
+        <param name="scan_context_num_sectors" value="60" />
+        <param name="scan_context_max_radius" value="25.0" />
+        <param name="scan_context_z_offset" value="2.0" />
+        <param name="scan_context_z_clip" value="10.0" />
+        <param name="scan_context_ringkey_topk" value="12" />
+        <param name="scan_context_refine_topk" value="8" />
+        <param name="stabilize_hold_translation" value="0.03" />
+        <param name="stabilize_hold_rotation_deg" value="0.25" />
+        <param name="stabilize_small_translation" value="0.10" />
+        <param name="stabilize_small_rotation_deg" value="1.0" />
+        <param name="stabilize_alpha_small" value="0.08" />
+        <param name="stabilize_alpha_large" value="0.20" />
+        <param name="stabilize_confidence_gate" value="0.95" />
+        
+    </node>
+
+	<!-- transform  fusion-->
+    <node pkg="fast_lio_localization" type="transform_fusion" name="transform_fusion" output="screen" />
+
+	<!-- glbal map-->
+    <node pkg="pcl_ros" type="pcd_to_pointcloud" name="map_publishe" output="screen"
+		  args="$(arg map) 5 _frame_id:=map cloud_pcd:=map" />
+
+
+
+       <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_body" args="0.43 0 0 0 0 0 base_link rslidar" />
+
+       <node pkg="fast_lio_localization" type="base_link" name="base_link" output="screen" />
+
+       <node pkg="fast_lio_localization" type="base_forward_arrow" name="base_forward_arrow" output="screen">
+           <param name="marker_topic" value="/fast_lio_localization/base_forward_arrow"/>
+           <param name="frame_id" value="base_link"/>
+       </node>
+
+       <node if="$(arg rviz)" pkg="rviz" type="rviz" name="fast_lio_localization_rviz" args="-d $(find fast_lio_localization)/rviz_cfg/localization.rviz" />
+
+
+</launch>

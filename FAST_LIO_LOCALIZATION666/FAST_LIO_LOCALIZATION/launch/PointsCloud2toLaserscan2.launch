@@ -1,0 +1,51 @@
+<launch>
+    <!-- 第一组: 输出到 scan (默认) -->
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <remap from="cloud_in" to="/cloud_registered"/>
+        <!-- 默认输出话题是 scan，所以这里不需要 remap，除非你想显式指定 -->
+        
+        <rosparam>
+            transform_tolerance: 0.01
+            min_height: 0.0
+            max_height: 0.1
+            angle_min: -3.14159
+            angle_max: 3.14159
+            angle_increment: 0.0087
+            scan_time: 10
+            range_min: 0.05
+            range_max: 30.0
+            use_inf: true
+            inf_epsilon: 1.0
+            concurrency_level: 1
+        </rosparam>
+    </node>
+
+    <!-- ============================================== -->
+    <!-- 第二组: 输出到 scan2 -->
+    <!-- ============================================== -->
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_2">
+        
+        <!-- 1. 修改输入话题: 将 /YOUR_SECOND_CLOUD_TOPIC 替换为你实际的第二组点云话题名 -->
+        <remap from="cloud_in" to="/back_rslidar_points"/>
+        
+        <!-- 2. 修改输出话题: 将默认的 scan 映射为 scan1 -->
+        <remap from="scan" to="scan1"/>
+        
+        <rosparam>
+            transform_tolerance: 0.01
+            min_height: 0.0
+            max_height: 0.1
+            
+            angle_min: -3.14159
+            angle_max: 3.14159
+            angle_increment: 0.0087
+            scan_time: 10
+            range_min: 0.05
+            range_max: 30.0
+            use_inf: true
+            inf_epsilon: 1.0
+            
+            concurrency_level: 1
+        </rosparam>
+    </node>
+</launch>

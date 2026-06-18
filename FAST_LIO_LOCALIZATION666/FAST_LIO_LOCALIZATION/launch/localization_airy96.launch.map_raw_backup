@@ -1,0 +1,85 @@
+<launch>
+<!-- Launch file for Livox AVIA LiDAR -->
+
+	<arg name="rviz" default="true" />
+	<arg name="enable_global_recall" default="true" />
+
+	<rosparam command="load" file="$(find fast_lio_localization)/config/airy96.yaml" />
+
+	<param name="feature_extract_enable" type="bool" value="0"/>
+	<param name="point_filter_num" type="int" value="6"/>
+	<param name="max_iteration" type="int" value="7" />
+	<param name="filter_size_surf" type="double" value="0.3" />
+	<param name="filter_size_map" type="double" value="0.3" />
+	<param name="cube_side_length" type="double" value="1000" />
+	<param name="runtime_pos_log_enable" type="bool" value="0" />
+    <node pkg="fast_lio_localization" type="fastlio_mapping1" name="laserMapping" output="log" respawn="true" respawn_delay="2" /> 
+
+
+	<!-- <arg name="map" default="/home/rm/ws_sentry/src/FAST_LIO/PCD(305_10-20)/scans.pcd" /> -->
+	<arg name="map" default="$(find map_processing)/input/scans.pcd" />
+	<!-- loalization-->
+    <node launch-prefix="nice -n 15" pkg="fast_gicp_localization" type="global_localization.py" name="global_localization" output="screen">
+		<env name="LD_LIBRARY_PATH" value="/home/jianmi/3D_navigation/thirdparty/fast_gicp/build:$(optenv LD_LIBRARY_PATH)" />
+		<param name="enable_global_recall" type="bool" value="$(arg enable_global_recall)" />
+	</node>
+
+	<!-- transform  fusion-->
+    <node pkg="fast_gicp_localization" type="transform_fusion.py" name="transform_fusion" output="log" />
+
+	<!-- glbal map-->
+    <node pkg="pcl_ros" type="pcd_to_pointcloud" name="map_publishe" output="log"
+		  args="$(arg map) 5 _frame_id:=map cloud_pcd:=map" />
+
+    <node launch-prefix="nice -n 10" pkg="map_processing" type="pct_cost_grid_markers.py" name="pct_cost_grid_markers" output="log">
+        <param name="tomogram_file" value="$(find map_processing)/output/pct_tomogram.pickle"/>
+        <param name="cloud_topic" value="/tomogram"/>
+        <param name="static_cloud_topic" value="/tomogram_static"/>
+        <param name="fused_cloud_topic" value="/nav3d/local_fused_map"/>
+        <param name="global_fused_cloud_topic" value="/nav3d/global_fused_map"/>
+        <param name="local_occupied_topic" value="/nav3d/local_occupied_cells"/>
+        <param name="local_free_topic" value="/nav3d/local_free_cells"/>
+        <param name="box_topic" value="/tomogram_update_box"/>
+        <param name="odom_topic" value="/localization"/>
+        <param name="frame_id" value="map"/>
+        <param name="mode" value="all_layers"/>
+        <param name="origin_z" value="0.0"/>
+        <param name="z_window" value="2.0"/>
+        <param name="static_z_window" value="2.0"/>
+        <param name="display_min_z" value="-1.00"/>
+        <param name="display_max_z" value="2.00"/>
+        <param name="xy_window" value="6.0"/>
+        <param name="max_points" value="20000"/>
+        <param name="static_max_points" value="20000"/>
+        <param name="fused_max_points" value="30000"/>
+        <param name="global_fused_max_points" value="30000"/>
+        <param name="local_cost_resolution" value="0.10"/>
+        <param name="local_surface_match_tolerance" value="0.20"/>
+        <param name="local_obstacle_min_height" value="0.20"/>
+        <param name="local_obstacle_max_height" value="0.80"/>
+        <param name="local_obstacle_inflation_radius" value="0.20"/>
+        <param name="local_obstacle_distance_radius" value="1.00"/>
+        <param name="local_obstacle_inflation_max_extra_cost" value="12.0"/>
+        <param name="local_surface_area_radius" value="0.20"/>
+        <param name="local_surface_min_support_cells" value="5"/>
+        <param name="local_surface_max_roughness" value="0.10"/>
+        <param name="publish_rate" value="2.0"/>
+        <param name="publish_local" value="false"/>
+        <param name="mask_static_with_local_state" value="false"/>
+        <param name="publish_layers" value="true"/>
+        <param name="layer_g_topic_prefix" value="/layer_G_"/>
+        <param name="layer_c_topic_prefix" value="/layer_C_"/>
+    </node>
+
+
+
+	<!-- build 2d map -->
+	<!-- <include file="$(find fast_lio)/launch/Pointcloud2Map.launch">
+	</include> -->
+
+	<!-- 2D map and pointcloud-to-laserscan are intentionally disabled for 3D localization. -->
+	<!-- They used to depend on the separate fast_lio package and could crash this launch. -->
+
+	<node if="$(arg rviz)" launch-prefix="nice -n 8" pkg="rviz" type="rviz" name="fast_lio_localization_rviz" args="-d $(find liorf_localization)/launch/include/config/rviz.rviz" />
+
+</launch>
